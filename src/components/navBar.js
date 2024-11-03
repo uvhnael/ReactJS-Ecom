@@ -18,32 +18,32 @@ const Navbar = () => {
     const [notifications, setNotifications] = useState([]);
     const [audio] = useState(new Audio('/notifi_sound.mp3')); // Load the audio file
 
-    useEffect(() => {
-        const socket = socketIOClient(process.env.REACT_APP_ENDPOINT);
+    // useEffect(() => {
+    //     const socket = socketIOClient(process.env.REACT_APP_ENDPOINT);
 
-        // Listen for notifications from the server
-        socket.on('receiveNotification', (data) => {
-            setNotifications((prevNotifications) => [...prevNotifications, data]);
-            audio.play();
-        });
+    //     // Listen for notifications from the server
+    //     socket.on('receiveNotification', (data) => {
+    //         setNotifications((prevNotifications) => [...prevNotifications, data]);
+    //         audio.play();
+    //     });
 
-        // Cleanup on component unmount
-        return () => {
-            socket.disconnect();
-        };
-    }, [audio]);
+    //     // Cleanup on component unmount
+    //     return () => {
+    //         socket.disconnect();
+    //     };
+    // }, [audio]);
 
     useEffect(() => {
         // Check if user is logged in using cookies
-        const savedUser = Cookies.get('user_data');
+        const savedUser = Cookies.get('user');
         if (savedUser) {
             setIsLoggedIn(true);
         }
     }, []);
 
     const handleLogout = () => {
-        Cookies.remove('auth_token');
-        Cookies.remove('user_data');
+        Cookies.remove('token');
+        Cookies.remove('user');
         setIsLoggedIn(false);
         setShowDropdown(false); // Hide dropdown on logout
     };

@@ -8,11 +8,12 @@ import { faUserCircle } from '@fortawesome/free-regular-svg-icons';
 
 
 async function fetchProduct(productId) {
+    console.log('Fetching product:', productId);
     try {
-        const response = await Axios.get(`${process.env.REACT_APP_API_URL}/product/getProduct/${productId}`,
+        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/products/${productId}`,
             {
                 headers: {
-                    Authorization: `${Cookies.get('auth_token')}`
+                    Authorization: `Bearer ${Cookies.get('token')}`
                 }
             }
         );
@@ -24,22 +25,24 @@ async function fetchProduct(productId) {
 
 async function fetchProductRate(productId) {
     try {
-        const response = await Axios.get(`${process.env.REACT_APP_API_URL}/product/rate/${productId}`);
+        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/products/rates/${productId}`);
 
         return response.data;
     } catch (error) {
-        console.error(error);
+        if (error.response.status === 404) {
+            return [];
+        }
     }
 }
 
 async function addToCart(customerId, productId, variantId, quantity) {
-
+    console.log('Adding to cart:', customerId, productId, variantId, quantity);
     try {
-        const response = await Axios.post(`${process.env.REACT_APP_API_URL}/cart`, {
-            customer_id: customerId,
-            product_id: productId,
-            variant_id: variantId,
-            quantity: quantity
+        const response = await Axios.post(`${process.env.REACT_APP_JAVA_API}/carts`, {
+            customerId,
+            productId,
+            variantId,
+            quantity
         }, {
             headers: {
                 Authorization: `${Cookies.get('auth_token')}`,
@@ -59,16 +62,19 @@ const ProductScreen = () => {
     const [variants, setVariants] = useState([]);
     const [attributes, setAttributes] = useState([]);
     const [attributeValues, setAttributeValues] = useState([]);
+    const [galleries, setGalleries] = useState([]);
+    const [category, setCategory] = useState([]);
     const [price, setPrice] = useState(0);
     const [stock, setStock] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [productRates, setProductRates] = useState([]);
     const [clickedButton, setClickedButton] = useState([]);
     const [disabledButton, setDisabledButton] = useState([]);
+    const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const data = Cookies.get('user_data');
+        const data = Cookies.get('user');
         if (data) {
             setCustomerId(JSON.parse(data).id);
         }
@@ -80,13 +86,17 @@ const ProductScreen = () => {
             setProduct(data);
             setVariants(data.variants || []);
             setAttributes(data.attributes || []);
-            setAttributeValues(data.attribute_values || []);
-            setPrice(data.regular_price || 0);
+            setAttributeValues(data.attributeValues || []);
+            setGalleries(data.galleries || []);
+            setCategory(data.category || []);
+            setPrice(data.regularPrice.value || 0);
             setStock(data.quantity || 0);
             setIsLoading(false);
+            const ratesData = await fetchProductRate(productId);
+            setProductRates(ratesData);
         };
         loadProduct();
-        fetchProductRate(productId).then((data) => setProductRates(data));
+
     }, [productId]);
 
 
@@ -120,7 +130,7 @@ const ProductScreen = () => {
             setPrice(selectedVariant.price);
             setStock(selectedVariant.quantity);
         } else {
-            setPrice(product.regular_price);
+            setPrice(product.regularPrice.value);
             setStock(product.quantity);
         }
     };
@@ -195,8 +205,16 @@ const ProductScreen = () => {
         var variantId = null;
         if (variants.length !== 0) {
             if (attributes.length === 1) {
+                if (clickedButton[0] === undefined || clickedButton[0] === '') {
+                    setError('Please select an attribute');
+                    return;
+                }
                 variantId = variants[clickedButton[0]].id;
             } else if (attributes.length === 2) {
+                if (clickedButton[0] === undefined || clickedButton[0] === '' || clickedButton[1] === undefined || clickedButton[1] === '') {
+                    setError('Please select an attribute');
+                    return;
+                }
                 variantId = variants[clickedButton[0] * attributeValues[1].length + clickedButton[1]].id;
             }
         }
@@ -210,13 +228,13 @@ const ProductScreen = () => {
             <div className="flex flex-rows justify-center">
                 <div className="bg-gray">
                     <img
-                        src={`http://localhost:8000/${product.galleries.find((gallery) => gallery.thumbnail).image_path}`}
-                        alt={product.product_name}
+                        src={`${process.env.REACT_APP_JAVA_API}/${galleries[0]}`}
+                        alt={product.productName}
                         className="w-full h-auto md:w-128"
                     />
                 </div>
                 <div className="bg-white p-4 w-128 rounded-lg shadow-lg">
-                    <h1 className="text-3xl font-bold mb-4">{product.product_name}</h1>
+                    <h1 className="text-3xl font-bold mb-4">{product.productName}</h1>
                     <p className="text-lg font-semibold mb-4">${price}</p>
                     <div className="mb-4">
                         {attributes.map((attr, attrIndex) => (
@@ -254,7 +272,7 @@ const ProductScreen = () => {
                                 onClick={() => setQuantity((prevQuantity) => Math.max(1, prevQuantity - 1))}
                                 className="px-3 py-1 bg-indigo-600 rounded-l-lg"
                             >
-                                <FontAwesomeIcon icon="fa-solid fa-minus" className="text-white" />
+                                {/* <FontAwesomeIcon icon="fa-solid fa-minus" className="text-white" /> */}
                             </button>
                             <div className="px-3 py-1 border border-1 border-indigo-600 w-16 justify-center items-center">
                                 <p className="text-center">{quantity}</p>
@@ -263,13 +281,14 @@ const ProductScreen = () => {
                                 onClick={() => setQuantity((prevQuantity) => Math.min(stock, prevQuantity + 1))}
                                 className="px-3 py-1 bg-indigo-600 rounded-r-lg"
                             >
-                                <FontAwesomeIcon icon="fa-solid fa-plus" className="text-white" />
+                                {/* <FontAwesomeIcon icon="fa-solid fa-plus" className="text-white" /> */}
                             </button>
                         </div>
                         <div>
                             <p className="px-4 font-normal text-gray-600">Stock: {stock}</p>
                         </div>
                     </div>
+                    {error && <p className="text-red-500">{error}</p>}
                     <div className="mb-4">
                         <button
                             className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
@@ -282,30 +301,37 @@ const ProductScreen = () => {
                         </button>
                     </div>
                 </div>
+
+            </div>
+            <div className="mt-8">
+                <div className="container mx-auto min-w-full p-4 mt-4">
+                    <h2 className="text-2xl font-bold mb-4">Product Description</h2>
+                    <p className="text-lg">{product.description}</p>
+                </div>
             </div>
 
             <div className="w-11/12 mx-auto mt-8">
                 <div className="container mx-auto min-w-full p-4 mt-4">
-                    {productRates.map((productRate, index) => (
-                        <React.Fragment key={productRate._id} >
+                    {productRates && productRates.map((productRate, index) => (
+                        <React.Fragment key={productRate.id} >
                             <div className="flex flex-row items-top bg-white shadow-lg p-4">
                                 <div className="flex flex-col p-1">
                                     <FontAwesomeIcon icon={faUserCircle} className="text-4xl text-gray-500" />
                                 </div>
                                 <div className="flex flex-col ml-4">
-                                    <p className="text-lg line-clamp-1">{productRate.customer_name}</p>
+                                    <p className="text-lg line-clamp-1">{productRate.customerName}</p>
                                     <div className='text-sm'>
                                         <FiveStar rating={productRate.rate} />
                                     </div>
-                                    <p className="text-gray-500">{productRate.created_at} | {productRate.product_attribute_value}</p>
+                                    <p className="text-gray-500">{productRate.createdAt} | {productRate.productAttributeValue}</p>
 
                                     <p className="text-base break-all">{productRate.review}</p>
 
                                     <div className="flex flex-row mt-4">
-                                        <video src={`http://localhost:8000/${productRate.video_path}`} controls className="size-48 border border-gray-200 mr-2" />
+                                        <video src={`${process.env.REACT_APP_JAVA_API}/${productRate.videoPath}`} controls className="size-48 border border-gray-200 mr-2" />
 
-                                        {productRate.image_path.map((image, index) => (
-                                            <img key={index} src={`http://localhost:8000/${image}`} alt={`preview-${index}`} className="size-48  border border-gray-200 mr-2" />
+                                        {productRate.imagePath.map((image, index) => (
+                                            <img key={index} src={`${process.env.REACT_APP_JAVA_API}/${image}`} alt={`preview-${index}`} className="size-48  border border-gray-200 mr-2" />
                                         ))}
                                     </div>
 
@@ -316,7 +342,7 @@ const ProductScreen = () => {
                     ))}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

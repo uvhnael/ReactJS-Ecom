@@ -5,10 +5,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const Banner = () => {
     const heroImages = [
-        "http://localhost:8000/uploads/slideshow1.png",
-        "http://localhost:8000/uploads/slideshow2.png",
-        "http://localhost:8000/uploads/slideshow3.png",
-        "http://localhost:8000/uploads/slideshow4.png"
+        `${process.env.REACT_APP_JAVA_API}/uploads/slideshow1.png`,
+        `${process.env.REACT_APP_JAVA_API}/uploads/slideshow2.png`,
+        `${process.env.REACT_APP_JAVA_API}/uploads/slideshow3.png`,
+        `${process.env.REACT_APP_JAVA_API}/uploads/slideshow4.png`
     ];
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -36,13 +36,13 @@ const Banner = () => {
                 onClick={handlePrevClick}
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white px-4 py-2 rounded-full focus:outline-none z-20"
             >
-                <FontAwesomeIcon icon="fa-solid fa-chevron-left" className='h-10' />
+                {/* <FontAwesomeIcon icon="fa-solid fa-chevron-left" className='h-10' /> */}
             </button>
             <button
                 onClick={handleNextClick}
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white px-4 py-2 rounded-full focus:outline-none z-20"
             >
-                <FontAwesomeIcon icon="fa-solid fa-chevron-right" className='h-10' />
+                {/* <FontAwesomeIcon icon="fa-solid fa-chevron-right" className='h-10' /> */}
             </button>
         </div>
     );

@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import Axios from 'axios';
 import Cookies from 'js-cookie';
+
+async function login(email, password) {
+    try {
+        const response = await Axios.post(`${process.env.REACT_APP_JAVA_API}/auth/login`, {
+            email,
+            password,
+        });
+        const data = response.data;
+        Cookies.set('token', data.token);
+        Cookies.set('user', JSON.stringify(data));
+        window.location.href = '/';
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
@@ -9,19 +24,9 @@ const LoginScreen = () => {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, { email, password })
-            .then((response) => {
-                console.log(response.data);
-                Cookies.set('auth_token', response.data.token, { expires: 1, path: '/' }); // Expires in 1 day, adjust as needed
-                Cookies.set('user_data', JSON.stringify(response.data), { expires: 1, path: '/' }); // Expires in 1 day, adjust as needed
-                window.location.href = '/';
-            })
-            .catch((error) => {
-                console.error(error);
-            });
-
-
+        login(email, password);
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">

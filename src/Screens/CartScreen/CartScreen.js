@@ -10,9 +10,9 @@ import 'reactjs-popup/dist/index.css';
 
 async function getCartItems(customerId) {
     try {
-        const response = await Axios.get(`${process.env.REACT_APP_API_URL}/cart/` + customerId, {
+        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/carts/customer/` + customerId, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`
+                Authorization: `Bearer ${Cookies.get('token')}`
             }
         });
         return response.data;
@@ -23,9 +23,10 @@ async function getCartItems(customerId) {
 
 async function updateCartItem(cartItem) {
     try {
-        const response = await Axios.put(`${process.env.REACT_APP_API_URL}/cart`, cartItem, {
+        const response = await Axios.put(`${process.env.REACT_APP_JAVA_API}/carts`, cartItem, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`
+                Authorization: `Bearer ${Cookies.get('token')}`
+
             }
         });
         return response.data;
@@ -36,9 +37,10 @@ async function updateCartItem(cartItem) {
 
 async function deleteCartItem(id) {
     try {
-        const response = await Axios.delete(`${process.env.REACT_APP_API_URL}/cart/` + id, {
+        const response = await Axios.delete(`${process.env.REACT_APP_JAVA_API}/carts/` + id, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`
+                Authorization: `Bearer ${Cookies.get('token')}`
+
             }
         });
         return response.data;
@@ -56,7 +58,7 @@ const CartScreen = () => {
 
     useEffect(() => {
         // Check if user is logged in using cookies
-        const savedUser = Cookies.get('user_data');
+        const savedUser = Cookies.get('user');
         if (savedUser) {
             setIsLoggedIn(true);
             setCustomerId(JSON.parse(savedUser).id);
@@ -91,7 +93,7 @@ const CartScreen = () => {
     const setAttributeValues = (id, attributeValues) => {
         const newCartItems = cartItems.map((item) => {
             if (item.id === id) {
-                return { ...item, attribute_values: attributeValues };
+                return { ...item, attributeValues: attributeValues };
             }
             return item;
         });
@@ -102,9 +104,9 @@ const CartScreen = () => {
         const cartItem = {
             id,
             quantity,
-            variant_id: variantId,
-            customer_id: customerId,
-            product_id: productId
+            variantId: variantId,
+            customerId: customerId,
+            productId: productId
         };
 
         try {
@@ -179,7 +181,7 @@ const CartScreen = () => {
                                     </td>
                                     <td className="px-4 py-2 flex items-center space-x-4">
                                         <img
-                                            src={`http://localhost:8000/${item.product.galleries[0]}`}
+                                            src={`${process.env.REACT_APP_JAVA_API}/${item.product.galleries[0]}`}
                                             alt={item.product.id}
                                             className="w-24 h-24 object-cover"
                                         />
@@ -187,15 +189,15 @@ const CartScreen = () => {
                                             to={`/product/${item.product.id}`}
                                             className="text-blue-500 hover:underline"
                                         >
-                                            {item.product.product_name}
+                                            {item.product.productName}
                                         </NavLink>
                                     </td>
                                     <td className="px-4 py-2 text-center">
-                                        {item.variant_id !== null && (
+                                        {item.variantId !== null && (
                                             <Popup
                                                 trigger={
                                                     <button className="bg-gray-100 p-1 rounded-md hover:bg-gray-200 text-gray-600">
-                                                        {item.attribute_values}
+                                                        {item.attributeValues}
                                                         <FontAwesomeIcon icon={faCaretDown} className="pl-1" />
                                                     </button>}
                                                 position="bottom center"
@@ -203,18 +205,18 @@ const CartScreen = () => {
                                             >
                                                 <AttributesDropdown
                                                     attributes={item.product.attributes}
-                                                    attributeValues={item.product.attribute_values}
+                                                    attributeValues={item.product.attributeValues}
                                                     variants={item.product.variants}
-                                                    setAttributeValues={(attribute_values) => { setAttributeValues(item.id, attribute_values) }}
-                                                    handleUpdateCartItem={(variant_id) => { handleUpdateCartItem(item.id, item.quantity, variant_id, item.product.id) }}
+                                                    setAttributeValues={(attributeValues) => { setAttributeValues(item.id, attributeValues) }}
+                                                    handleUpdateCartItem={(variantId) => { handleUpdateCartItem(item.id, item.quantity, variantId, item.product.id) }}
                                                 />
                                             </Popup>
                                         )}
                                     </td>
-                                    <td className="px-4 py-2 text-center">${item.product.regular_price}</td>
+                                    <td className="px-4 py-2 text-center">{item.product.regularPrice.formattedPrice}</td>
                                     <td className="px-4 py-2 text-center">{item.quantity}</td>
                                     <td className="px-4 py-2 text-center">
-                                        ${(item.product.regular_price * item.quantity).toFixed(2)}
+                                        ${(item.product.regularPrice.value * item.quantity).toFixed(2)}
                                     </td>
                                     <td className="px-4 py-2 text-center">
                                         <button

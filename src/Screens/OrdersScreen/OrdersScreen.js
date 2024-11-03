@@ -7,9 +7,9 @@ import ProductRatePopup from "../ProductRateScreen/ProductRatePopup";
 async function fetchOrders(customerId) {
     if (!customerId) return [];
     try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/order/getOrder/${customerId}`, {
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/orders/customer/${customerId}`, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`
+                Authorization: `Bearer ${Cookies.get('token')}`
             }
         });
         return response.data;
@@ -29,7 +29,7 @@ const OrdersScreen = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        const userData = Cookies.get('user_data');
+        const userData = Cookies.get('user');
         if (userData) {
             setCustomerId(JSON.parse(userData).id);
         }
@@ -47,19 +47,19 @@ const OrdersScreen = () => {
 
     useEffect(() => {
         const newOrderStatus = orders.map((order) => {
-            if (order.order_status_id === 1) {
+            if (order.orderStatusId === 1) {
                 return "Pending";
-            } else if (order.order_status_id === 2 && order.order_delivered_carrier_date === "Invalid date" && order.order_delivered_customer_date === "Invalid date") {
+            } else if (order.orderStatusId === 2 && order.orderDeliveredCarrierDate === "Invalid date" && order.orderDeliveredCustomerDate === "Invalid date") {
                 return "Approved";
-            } else if (order.order_status_id === 2 && order.order_delivered_carrier_date !== "Invalid date" && order.order_delivered_customer_date === "Invalid date") {
+            } else if (order.orderStatusId === 2 && order.orderDeliveredCarrierDate !== "Invalid date" && order.orderDeliveredCustomerDate === "Invalid date") {
                 return "In Transit";
-            } else if (order.order_status_id === 2 && order.order_delivered_carrier_date !== "Invalid date" && order.order_delivered_customer_date !== "Invalid date") {
+            } else if (order.orderStatusId === 2 && order.orderDeliveredCarrierDate !== "Invalid date" && order.orderDeliveredCustomerDate !== "Invalid date") {
                 return "Delivered";
-            } else if (order.order_status_id === 3) {
+            } else if (order.orderStatusId === 3) {
                 return "Completed";
-            } else if (order.order_status_id === 4) {
+            } else if (order.orderStatusId === 4) {
                 return "Cancelled";
-            } else if (order.order_status_id === 5) {
+            } else if (order.orderStatusId === 5) {
                 return "Returned";
             }
             return "Unknown"; // In case none of the conditions match
@@ -70,7 +70,7 @@ const OrdersScreen = () => {
 
 
     function isOrderWithinLast30Days(orderDeliveredCustomerDate) {
-        // Parse the order_delivered_customer_date
+        // Parse the orderDeliveredCustomerDate
         const [time, date] = orderDeliveredCustomerDate.split(" ");
         const [hours, minutes, seconds] = time.split(":");
         const [day, month, year] = date.split("/");
@@ -127,17 +127,17 @@ const OrdersScreen = () => {
                                     </div>
                                 </td>
                             </tr>
-                            {order.order_items.map((orderItem) => (
+                            {order.orderItems.map((orderItem) => (
                                 <tr className="bg-white shadow-lg">
                                     <td className="px-4 py-2 border-b border-gray-200 ">
                                         <div className="flex flex-row items-top">
                                             <img
-                                                src={`http://localhost:8000/${orderItem.product.image_path}`}
-                                                alt={orderItem.product.product_name} className="size-24"
+                                                src={`${process.env.REACT_APP_JAVA_API}/${orderItem.imagePath}`}
+                                                alt={orderItem.productName} className="size-24"
                                             />
                                             <div className="flex flex-col ml-4">
-                                                <p className="text-lg line-clamp-1">{orderItem.product.product_name}</p>
-                                                {orderItem.variant_id !== null && <p className="text-base text-gray-500">Variant: {orderItem.attribute_value}</p>}
+                                                <p className="text-lg line-clamp-1">{orderItem.productName}</p>
+                                                {orderItem.variant_id !== null && <p className="text-base text-gray-500">{orderItem.attributeValues}</p>}
                                                 <p className="text-base font-medium">x{orderItem.quantity}</p>
                                             </div>
                                         </div>
@@ -151,7 +151,7 @@ const OrdersScreen = () => {
                                 <td colSpan="2" className="py-2">
                                     <div className="px-4 py-2 flex flex-row items-center justify-end">
                                         <p className="text-lg font-medium text-gray-500">Total: </p>
-                                        <p className="text-lg font-bold text-indigo-600"> ${order.order_items.reduce((acc, item) => acc + item.price * item.quantity, 0)}</p>
+                                        <p className="text-lg font-bold text-indigo-600"> ${order.orderItems.reduce((acc, item) => acc + item.price * item.quantity, 0)}</p>
                                     </div>
                                 </td>
                             </tr>
@@ -160,7 +160,7 @@ const OrdersScreen = () => {
                                     <div className="flex flex-row justify-end">
                                         {(orderStatus[index] === "Pending" || orderStatus[index] === "Approved") && <button className="bg-indigo-600 text-white px-4 py-2 rounded-sm">Cancel Order</button>}
                                         {(orderStatus[index] === "Delivered") && <button className="bg-indigo-600 text-white px-4 py-2 rounded-sm">Completed</button>}
-                                        {orderStatus[index] === "Completed" && isOrderWithinLast30Days(order.order_delivered_customer_date) && (
+                                        {orderStatus[index] === "Completed" && isOrderWithinLast30Days(order.orderDeliveredCustomerDate) && (
                                             <button
                                                 onClick={() => handleRateButtonClick(order.order_items[0])}
                                                 className="bg-indigo-600 text-white px-4 py-2 rounded-sm">

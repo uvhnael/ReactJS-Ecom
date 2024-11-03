@@ -4,13 +4,12 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import SuccessPopup from './OrderSuccessPopup';
 
-async function getCartItems(idList) {
+async function getCartItems(cartIds) {
     try {
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/cart/getCartOrderItems`,
-            { idList },
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/carts/order/` + cartIds,
             {
                 headers: {
-                    Authorization: `${Cookies.get('auth_token')}`
+                    Authorization: `Bearer ${Cookies.get('token')}`
                 }
             });
         return response.data;
@@ -20,10 +19,11 @@ async function getCartItems(idList) {
     }
 }
 async function fetchAddresses(userId) {
+    if ((userId === null) || (userId === 0)) return [];
     try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/address/${userId}`, {
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/addresses/customer/${userId}`, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`,
+                Authorization: `Bearer ${Cookies.get('token')}`,
             },
         });
         return response.data;
@@ -35,7 +35,7 @@ async function fetchAddresses(userId) {
 
 async function getProductCoupon(idList) {
     try {
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/coupon`, { idList });
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/coupons/products/` + idList);
         return response.data;
     } catch (error) {
         console.error(error);
@@ -45,7 +45,7 @@ async function getProductCoupon(idList) {
 
 async function getOrderCoupon() {
     try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/coupon`);
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/coupons/order`);
         return response.data;
     } catch (error) {
         console.error(error);
@@ -55,9 +55,9 @@ async function getOrderCoupon() {
 
 async function placeOrder(orderData) {
     try {
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/order`, orderData, {
+        const response = await axios.post(`${process.env.REACT_APP_JAVA_API}/order`, orderData, {
             headers: {
-                Authorization: `${Cookies.get('auth_token')}`
+                Authorization: `${Cookies.get('token')}`
             }
         });
         return response.data;
@@ -83,7 +83,7 @@ const OrderScreen = () => {
     const [orderSuccess, setOrderSuccess] = useState(false);
 
     useEffect(() => {
-        const userData = Cookies.get('user_data');
+        const userData = Cookies.get('user');
         if (userData) {
             setCustomerId(JSON.parse(userData).id);
         }
@@ -115,7 +115,7 @@ const OrderScreen = () => {
         }
         setProductDiscount(new Array(cartItems.length).fill(0));
         setOrderDiscount(0);
-        setProductVariantPrice(cartItems.map((item) => (item.variant_id !== null ? item.product.variants.find((variant) => variant.id === item.variant_id).price : item.product.regular_price)));
+        setProductVariantPrice(cartItems.map((item) => (item.variantId !== 0 ? item.product.variants.find((variant) => variant.id === item.variantId).price : item.product.regularPrice.value)));
     }, [cartItems]);
 
     const handleCouponChange = (e, index) => {
@@ -134,9 +134,9 @@ const OrderScreen = () => {
             });
             if (coupon) {
                 if (coupon.discount_type === "product_percentage") {
-                    newProductDiscount[index] = product.variants.find((variant) => variant.id === cartItems[index].variant_id).price * coupon.discount_value / 100;
+                    newProductDiscount[index] = product.variants.find((variant) => variant.id === cartItems[index].variantId).price * coupon.discountValue / 100;
                 } else if (coupon.discount_type === "product_fixed") {
-                    newProductDiscount[index] = coupon.discount_value;
+                    newProductDiscount[index] = coupon.discountValue;
                 } else {
                     newProductDiscount[index] = 0;
                 }
@@ -155,10 +155,10 @@ const OrderScreen = () => {
             const coupon = orderCoupon.find((coupon) => coupon.id === parseInt(couponId));
             setSelectedOrderCoupon(coupon);
             if (coupon) {
-                if (coupon.discount_type === "percentage") {
-                    setOrderDiscount(cartItems.reduce((acc, item, index) => acc + productVariantPrice[index] * item.quantity - productDiscount[index], 0) * coupon.discount_value / 100);
-                } else if (coupon.discount_type === "fixed") {
-                    setOrderDiscount(coupon.discount_value);
+                if (coupon.discountType === "percentage") {
+                    setOrderDiscount(cartItems.reduce((acc, item, index) => acc + productVariantPrice[index] * item.quantity - productDiscount[index], 0) * coupon.discountValue / 100);
+                } else if (coupon.discountType === "fixed") {
+                    setOrderDiscount(coupon.discountValue);
                 } else {
                     setOrderDiscount(0);
                 }
@@ -169,10 +169,10 @@ const OrderScreen = () => {
     const updateOrderDiscount = (newProductDiscount) => {
         const coupon = selectedOrderCoupon;
         if (coupon) {
-            if (coupon.discount_type === "percentage") {
-                setOrderDiscount(cartItems.reduce((acc, item, index) => acc + productVariantPrice[index] * item.quantity - newProductDiscount[index], 0) * coupon.discount_value / 100);
-            } else if (coupon.discount_type === "fixed") {
-                setOrderDiscount(coupon.discount_value);
+            if (coupon.discountType === "percentage") {
+                setOrderDiscount(cartItems.reduce((acc, item, index) => acc + productVariantPrice[index] * item.quantity - newProductDiscount[index], 0) * coupon.discountValue / 100);
+            } else if (coupon.discountType === "fixed") {
+                setOrderDiscount(coupon.discountValue);
             } else {
                 setOrderDiscount(0);
             }
@@ -221,16 +221,16 @@ const OrderScreen = () => {
                 <div className="flex flex-col w-full">
                     <p className="text-lg font-medium">Shipping Address</p>
                     {addresses.map((address) => (
-                        address.is_default === 1 ? (
+                        address.default === true ? (
                             <div key={address.id} className="flex flex-row px-4 py-2 bg-white shadow-lg justify-between">
                                 <div className="flex flex-col">
                                     <div className="flex flex-row items-center">
-                                        <p className="font-medium">{address.customer_name}</p>
+                                        <p className="font-medium">{address.customerName}</p>
                                         <p className="px-2">|</p>
-                                        <p className="text-gray-500">{address.phone_number}</p>
+                                        <p className="text-gray-500">{address.phoneNumber}</p>
                                     </div>
                                     <div className="flex flex-row items-center">
-                                        <p className="text-gray-500">{address.address_line1}, {address.address_line2}</p>
+                                        <p className="text-gray-500">{address.addressLine1}, {address.addressLine2}</p>
                                     </div>
                                     <div className="flex flex-row items-center">
                                         <p className="text-gray-500">{address.ward}, {address.district}, {address.city}</p>
@@ -257,14 +257,14 @@ const OrderScreen = () => {
                             <tr className="bg-white rounded-xl shadow-lg">
                                 <td className="px-4 py-2 border-b border-gray-200 flex flex-row items-center space-x-4">
                                     <img
-                                        src={`http://localhost:8000/${item.product.gallery[0]}`}
+                                        src={`${process.env.REACT_APP_JAVA_API}/${item.product.galleries[0]}`}
                                         alt={item.product.id}
                                         className="w-24 h-24 object-cover"
                                     />
-                                    <p className="font-medium">{item.product.product_name}</p>
+                                    <p className="font-medium">{item.product.productName}</p>
                                 </td>
                                 <td className="w-40 px-4 py-2 border-b border-gray-200 text-center">
-                                    <p className="text-gray-600">{item.attribute_values}</p>
+                                    <p className="text-gray-600">{item.attributeValues}</p>
                                 </td>
                                 <td className="w-48 px-4 py-2 border-b border-gray-200 text-center">${productVariantPrice[index]}</td>
                                 <td className="w-48 px-4 py-2 border-b border-gray-200 text-center">{item.quantity}</td>
@@ -284,7 +284,7 @@ const OrderScreen = () => {
                                             >
                                                 <option value="0">None</option>
                                                 {productCoupon[index] && productCoupon[index].map((coupon) => (
-                                                    <option key={coupon.id} value={coupon.id}>{coupon.code}</option>
+                                                    <option key={coupon.id} value={coupon.id}>{coupon.couponDescription + ` - ` + coupon.code}</option>
                                                 ))}
                                             </select>
 
@@ -311,7 +311,7 @@ const OrderScreen = () => {
                                 >
                                     <option value="0">None</option>
                                     {orderCoupon && orderCoupon.map((coupon) => (
-                                        <option key={coupon.id} value={coupon.id}>{coupon.coupon_description + ` - ` + coupon.code}</option>
+                                        <option key={coupon.id} value={coupon.id}>{coupon.couponDescription + ` - ` + coupon.code}</option>
                                     ))}
                                 </select>
 

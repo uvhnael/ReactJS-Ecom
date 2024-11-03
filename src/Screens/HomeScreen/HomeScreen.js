@@ -5,7 +5,9 @@ import Banner from "./Banner";
 
 async function fetchData() {
     try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/product/getProducts`);
+        let url = `${process.env.REACT_APP_JAVA_API}/products/random?page=0&size=24`;
+        console.log(url);
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/products/random?size=60`);
         console.log(response.data);
         return response.data;
     }
@@ -17,13 +19,24 @@ async function fetchData() {
 
 
 function HomeScreen() {
-    const [products, setProducts] = useState([{ id: '', product_name: '', regular_price: '', image_path: '', quantity: '' }]);
+    const [products, setProducts] = useState();
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+
         fetchData().then((data) => {
             setProducts(data);
+            setIsLoading(false);
         });
     }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-96">
+                <p className="text-2xl font-bold">Loading...</p>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -33,7 +46,8 @@ function HomeScreen() {
                     <p>Recommend Products</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {products.map((product) => (
+                    {/* check if products != null  */}
+                    {products && products.map((product) => (
                         <ProductCard key={product.id} product={product} />
                     ))}
                 </div>
