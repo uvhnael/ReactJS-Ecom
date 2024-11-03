@@ -11,7 +11,7 @@ const ProfileScreen = () => {
     const [screen, setScreen] = useState('profile');
 
     useEffect(() => {
-        const userSaved = Cookies.get('user_data');
+        const userSaved = Cookies.get('user');
         if (userSaved) {
             setUser(JSON.parse(userSaved));
         }

@@ -18,10 +18,10 @@ async function getCartItems(cartIds) {
         return [];
     }
 }
-async function fetchAddresses(userId) {
+async function fetchAddress(userId) {
     if ((userId === null) || (userId === 0)) return [];
     try {
-        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/addresses/customer/${userId}`, {
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/addresses/customer/${userId}/default`, {
             headers: {
                 Authorization: `Bearer ${Cookies.get('token')}`,
             },
@@ -54,8 +54,9 @@ async function getOrderCoupon() {
 }
 
 async function placeOrder(orderData) {
+    console.log(orderData);
     try {
-        const response = await axios.post(`${process.env.REACT_APP_JAVA_API}/order`, orderData, {
+        const response = await axios.post(`${process.env.REACT_APP_JAVA_API}/orders`, orderData, {
             headers: {
                 Authorization: `${Cookies.get('token')}`
             }
@@ -71,7 +72,7 @@ const OrderScreen = () => {
     const { idList } = useParams();
     const [customerId, setCustomerId] = useState(0);
     const [cartItems, setCartItems] = useState([]);
-    const [addresses, setAddresses] = useState([]);
+    const [address, setAddress] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [productCoupon, setProductCoupon] = useState([[]]);
     const [orderCoupon, setOrderCoupon] = useState([]);
@@ -96,9 +97,9 @@ const OrderScreen = () => {
     }, [idList]);
 
     useEffect(() => {
-        fetchAddresses(customerId)
+        fetchAddress(customerId)
             .then((data) => {
-                setAddresses(data);
+                setAddress(data);
                 setIsLoading(false);
             });
     }, [customerId]);
@@ -185,17 +186,17 @@ const OrderScreen = () => {
 
     const handlePlaceOrder = () => {
         const orderData = {
-            customer_id: customerId,
-            coupon_id: selectedOrderCoupon?.id || 1,
-            customer_address_id: 1,
-            order_status_id: 1,
+            customerId: customerId,
+            couponId: selectedOrderCoupon?.id || null,
+            customerAddressId: address.id,
+            orderStatusId: 1,
             price: cartItems.reduce((acc, item, index) => acc + productVariantPrice[index] * item.quantity - productDiscount[index], 0) - orderDiscount,
-            order_items: cartItems.map((item, index) => ({
-                product_id: item.product.id,
-                variant_id: item.variant_id,
+            orderItems: cartItems.map((item, index) => ({
+                productId: item.product.id,
+                variantId: item.variantId,
                 price: productVariantPrice[index] - productDiscount[index],
                 quantity: item.quantity,
-                coupon_id: selectedProductCoupon[index]?.id || 1
+                couponId: selectedProductCoupon[index]?.id || null
             }))
         }
 
@@ -220,25 +221,23 @@ const OrderScreen = () => {
             <div className="flex flex-row items-center space-x-4">
                 <div className="flex flex-col w-full">
                     <p className="text-lg font-medium">Shipping Address</p>
-                    {addresses.map((address) => (
-                        address.default === true ? (
-                            <div key={address.id} className="flex flex-row px-4 py-2 bg-white shadow-lg justify-between">
-                                <div className="flex flex-col">
-                                    <div className="flex flex-row items-center">
-                                        <p className="font-medium">{address.customerName}</p>
-                                        <p className="px-2">|</p>
-                                        <p className="text-gray-500">{address.phoneNumber}</p>
-                                    </div>
-                                    <div className="flex flex-row items-center">
-                                        <p className="text-gray-500">{address.addressLine1}, {address.addressLine2}</p>
-                                    </div>
-                                    <div className="flex flex-row items-center">
-                                        <p className="text-gray-500">{address.ward}, {address.district}, {address.city}</p>
-                                    </div>
+                    {address && (
+                        <div key={address.id} className="flex flex-row px-4 py-2 bg-white shadow-lg justify-between">
+                            <div className="flex flex-col">
+                                <div className="flex flex-row items-center">
+                                    <p className="font-medium">{address.customerName}</p>
+                                    <p className="px-2">|</p>
+                                    <p className="text-gray-500">{address.phoneNumber}</p>
+                                </div>
+                                <div className="flex flex-row items-center">
+                                    <p className="text-gray-500">{address.addressLine1}, {address.addressLine2}</p>
+                                </div>
+                                <div className="flex flex-row items-center">
+                                    <p className="text-gray-500">{address.ward}, {address.district}, {address.city}</p>
                                 </div>
                             </div>
-                        ) : null
-                    ))}
+                        </div>
+                    )}
                 </div>
             </div>
             <table className="table-fixed min-w-full p-4 mt-4">
