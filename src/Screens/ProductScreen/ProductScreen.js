@@ -5,18 +5,25 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Cookies from 'js-cookie';
 import FiveStar from '../../components/FiveStar';
 import { faUserCircle } from '@fortawesome/free-regular-svg-icons';
-
+import ProductCard from '../../components/productCard';
 
 async function fetchProduct(productId) {
+    const token = Cookies.get('token');
+    if (!token) {
+        console.error('Token not found');
+        return;
+    }
+    else
+        console.log('Token:', token);
+
     console.log('Fetching product:', productId);
     try {
-        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/products/${productId}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${Cookies.get('token')}`
-                }
-            }
-        );
+        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/products/${productId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        console.log('Response:', response.data);
         return response.data;
     } catch (error) {
         console.error(error);
@@ -33,6 +40,16 @@ async function fetchProductRate(productId) {
             return [];
         }
     }
+}
+
+async function fetchProductCategory(categoryId) {
+    try {
+        const response = await Axios.get(`${process.env.REACT_APP_JAVA_API}/products/random/category/${categoryId}?size=18`);
+        return response.data;
+    } catch (error) {
+        console.error(error);
+    }
+
 }
 
 async function addToCart(customerId, productId, variantId, quantity) {
@@ -59,15 +76,11 @@ const ProductScreen = () => {
     const { productId } = useParams();
     const [customerId, setCustomerId] = useState();
     const [product, setProduct] = useState(null);
-    const [variants, setVariants] = useState([]);
-    const [attributes, setAttributes] = useState([]);
-    const [attributeValues, setAttributeValues] = useState([]);
-    const [galleries, setGalleries] = useState([]);
-    const [category, setCategory] = useState([]);
     const [price, setPrice] = useState(0);
     const [stock, setStock] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [productRates, setProductRates] = useState([]);
+    const [productCategory, setProductCategory] = useState([]);
     const [clickedButton, setClickedButton] = useState([]);
     const [disabledButton, setDisabledButton] = useState([]);
     const [error, setError] = useState(null);
@@ -84,11 +97,6 @@ const ProductScreen = () => {
         const loadProduct = async () => {
             const data = await fetchProduct(productId);
             setProduct(data);
-            setVariants(data.variants || []);
-            setAttributes(data.attributes || []);
-            setAttributeValues(data.attributeValues || []);
-            setGalleries(data.galleries || []);
-            setCategory(data.category || []);
             setPrice(data.regularPrice.value || 0);
             setStock(data.quantity || 0);
             setIsLoading(false);
@@ -99,11 +107,18 @@ const ProductScreen = () => {
 
     }, [productId]);
 
+    useEffect(() => {
+        // fectch product category
+        if (product) {
+            fetchProductCategory(product.category.id).then((data) => {
+                setProductCategory(data);
+            });
+        }
+    }, [product]);
 
     useEffect(() => {
         setDisabledButton(baseDisabledButton());
-        // eslint-disable-next-line
-    }, [variants]);
+    }, [product]);
 
     useEffect(() => {
         setDisabledButton(updateDisabledButton(baseDisabledButton()));
@@ -120,12 +135,12 @@ const ProductScreen = () => {
 
     const updatePriceAndStock = (newClickedButton) => {
         const selectedAttributes = newClickedButton.filter((button) => button !== '');
-        if (selectedAttributes.length === attributes.length) {
+        if (selectedAttributes.length === product.attributes.length) {
             let selectedVariant = [];
             if (selectedAttributes.length === 1) {
-                selectedVariant = variants[newClickedButton[0]];
+                selectedVariant = product.variants[newClickedButton[0]];
             } else if (selectedAttributes.length === 2) {
-                selectedVariant = variants[newClickedButton[0] * attributeValues[1].length + newClickedButton[1]];
+                selectedVariant = product.variants[newClickedButton[0] * product.attributeValues[1].length + newClickedButton[1]];
             }
             setPrice(selectedVariant.price);
             setStock(selectedVariant.quantity);
@@ -137,21 +152,21 @@ const ProductScreen = () => {
 
     const baseDisabledButton = () => {
         const disabledButton = [];
-        if (attributes.length === 0 || attributeValues.length === 0 || variants.length === 0) {
+        if (!product || product.attributes.length === 0 || product.attributeValues.length === 0 || product.variants.length === 0) {
             return disabledButton;
         }
 
-        if (attributes.length === 1) {
-            for (let i = 0; i < attributeValues[0].length; i++) {
-                if (variants[i].quantity <= 0) {
+        if (product.attributes.length === 1) {
+            for (let i = 0; i < product.attributeValues[0].length; i++) {
+                if (product.variants[i].quantity <= 0) {
                     disabledButton.push(i);
                 }
             }
-        } else if (attributes.length === 2) {
-            for (let i = 0; i < attributeValues[0].length; i++) {
+        } else if (product.attributes.length === 2) {
+            for (let i = 0; i < product.attributeValues[0].length; i++) {
                 let disabled = true;
-                for (let j = 0; j < attributeValues[1].length; j++) {
-                    if (variants[i * attributeValues[1].length + j].quantity > 0) {
+                for (let j = 0; j < product.attributeValues[1].length; j++) {
+                    if (product.variants[i * product.attributeValues[1].length + j].quantity > 0) {
                         disabled = false;
                     }
                 }
@@ -159,15 +174,15 @@ const ProductScreen = () => {
                     disabledButton.push(i);
                 }
             }
-            for (let i = 0; i < attributeValues[1].length; i++) {
+            for (let i = 0; i < product.attributeValues[1].length; i++) {
                 let disabled = true;
-                for (let j = 0; j < attributeValues[0].length; j++) {
-                    if (variants[j * attributeValues[1].length + i].quantity > 0) {
+                for (let j = 0; j < product.attributeValues[0].length; j++) {
+                    if (product.variants[j * product.attributeValues[1].length + i].quantity > 0) {
                         disabled = false;
                     }
                 }
                 if (disabled) {
-                    disabledButton.push(attributeValues[0].length + i);
+                    disabledButton.push(product.attributeValues[0].length + i);
                 }
             }
         }
@@ -178,19 +193,19 @@ const ProductScreen = () => {
     const updateDisabledButton = (baseDisabledButton) => {
         const newDisabledButton = [...baseDisabledButton];
 
-        if (attributes.length === 0 || attributes.length === 1) {
+        if (!product || product.attributes.length === 0 || product.attributes.length === 1) {
             return newDisabledButton;
         }
         if (clickedButton[0] !== undefined && clickedButton[0] !== '') {
-            for (let i = 0; i < attributeValues[1].length; i++) {
-                if (variants[clickedButton[0] * attributeValues[1].length + i].quantity <= 0) {
-                    newDisabledButton.push(attributeValues[0].length + i);
+            for (let i = 0; i < product.attributeValues[1].length; i++) {
+                if (product.variants[clickedButton[0] * product.attributeValues[1].length + i].quantity <= 0) {
+                    newDisabledButton.push(product.attributeValues[0].length + i);
                 }
             }
         }
         if (clickedButton[1] !== undefined && clickedButton[1] !== '') {
-            for (let i = 0; i < attributeValues[0].length; i++) {
-                if (variants[i * attributeValues[1].length + clickedButton[1]].quantity <= 0) {
+            for (let i = 0; i < product.attributeValues[0].length; i++) {
+                if (product.variants[i * product.attributeValues[1].length + clickedButton[1]].quantity <= 0) {
                     newDisabledButton.push(i);
                 }
             }
@@ -203,19 +218,19 @@ const ProductScreen = () => {
 
     const handleAddToCart = async () => {
         var variantId = null;
-        if (variants.length !== 0) {
-            if (attributes.length === 1) {
+        if (product.variants.length !== 0) {
+            if (product.attributes.length === 1) {
                 if (clickedButton[0] === undefined || clickedButton[0] === '') {
                     setError('Please select an attribute');
                     return;
                 }
-                variantId = variants[clickedButton[0]].id;
-            } else if (attributes.length === 2) {
+                variantId = product.variants[clickedButton[0]].id;
+            } else if (product.attributes.length === 2) {
                 if (clickedButton[0] === undefined || clickedButton[0] === '' || clickedButton[1] === undefined || clickedButton[1] === '') {
                     setError('Please select an attribute');
                     return;
                 }
-                variantId = variants[clickedButton[0] * attributeValues[1].length + clickedButton[1]].id;
+                variantId = product.variants[clickedButton[0] * product.attributeValues[1].length + clickedButton[1]].id;
             }
         }
         await addToCart(customerId, productId, variantId, quantity);
@@ -228,7 +243,7 @@ const ProductScreen = () => {
             <div className="flex flex-rows justify-center">
                 <div className="bg-gray">
                     <img
-                        src={`${process.env.REACT_APP_JAVA_API}/${galleries[0]}`}
+                        src={`${product.galleries[0]}`}
                         alt={product.productName}
                         className="w-full h-auto md:w-128"
                     />
@@ -237,16 +252,16 @@ const ProductScreen = () => {
                     <h1 className="text-3xl font-bold mb-4">{product.productName}</h1>
                     <p className="text-lg font-semibold mb-4">${price}</p>
                     <div className="mb-4">
-                        {attributes.map((attr, attrIndex) => (
+                        {product.attributes && product.attributes.map((attr, attrIndex) => (
                             <div key={attrIndex} className="flex flex-row mb-2 items-center">
                                 <div className="w-24">
                                     <p className="font-normal text-gray-600">{attr}</p>
                                 </div>
                                 <div className="flex flex-wrap py-1">
-                                    {attributeValues[attrIndex].map((value, valueIndex) => (
+                                    {product.attributeValues[attrIndex].map((value, valueIndex) => (
                                         <button
                                             key={valueIndex}
-                                            className={`px-3 py-1 rounded-lg mr-2 ${disabledButton.includes(attrIndex * attributeValues[0].length + valueIndex)
+                                            className={`px-3 py-1 rounded-lg mr-2 ${disabledButton.includes(attrIndex * product.attributeValues[0].length + valueIndex)
                                                 ? 'text-gray-500 bg-gray-300 '
                                                 : 'bg-gray-200 '
                                                 } ${clickedButton[attrIndex] === valueIndex
@@ -254,7 +269,7 @@ const ProductScreen = () => {
                                                     : ''
                                                 }`}
                                             onClick={() => handleButtonClick(attrIndex, valueIndex)}
-                                            disabled={disabledButton.includes(attrIndex * attributeValues[0].length + valueIndex)}
+                                            disabled={disabledButton.includes(attrIndex * product.attributeValues[0].length + valueIndex)}
                                         >
                                             {value}
                                         </button>
@@ -342,7 +357,17 @@ const ProductScreen = () => {
                     ))}
                 </div>
             </div>
-        </div >
+
+            {/* similar product category */}
+            <div className="container mx-auto min-w-full p-4 mt-4">
+                <h2 className="text-2xl font-bold mb-4">Similar Products</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {productCategory && productCategory.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
+            </div >
+        </div>
     );
 };
 

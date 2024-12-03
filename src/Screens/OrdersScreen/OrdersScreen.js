@@ -132,7 +132,7 @@ const OrdersScreen = () => {
                                     <td className="px-4 py-2 border-b border-gray-200 ">
                                         <div className="flex flex-row items-top">
                                             <img
-                                                src={`${process.env.REACT_APP_JAVA_API}/${orderItem.imagePath}`}
+                                                src={`${orderItem.imagePath}`}
                                                 alt={orderItem.productName} className="size-24"
                                             />
                                             <div className="flex flex-col ml-4">

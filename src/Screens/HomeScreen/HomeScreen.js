@@ -2,18 +2,27 @@ import React, { useState, useEffect } from "react";
 import axios from 'axios';
 import ProductCard from "../../components/productCard";
 import Banner from "./Banner";
+import Cookies from 'js-cookie';
 
-async function fetchData() {
+async function fetchProducts() {
     try {
-        let url = `${process.env.REACT_APP_JAVA_API}/products/random?page=0&size=24`;
-        console.log(url);
         const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/products/random?size=60`);
         console.log(response.data);
         return response.data;
     }
     catch (error) {
         console.error(error);
+    }
+}
 
+async function fetchRecommendProducts(customerId) {
+    try {
+        const response = await axios.get(`${process.env.REACT_APP_JAVA_API}/products/recommend/customer/${customerId}?size=60`);
+        console.log(response.data);
+        return response.data;
+    }
+    catch (error) {
+        console.error(error);
     }
 }
 
@@ -23,11 +32,18 @@ function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-
-        fetchData().then((data) => {
-            setProducts(data);
-            setIsLoading(false);
-        });
+        const data = Cookies.get('user');
+        if (data) {
+            fetchRecommendProducts(JSON.parse(data).id).then((data) => {
+                setProducts(data);
+                setIsLoading(false);
+            });
+        }
+        else
+            fetchProducts().then((data) => {
+                setProducts(data);
+                setIsLoading(false);
+            });
     }, []);
 
     if (isLoading) {

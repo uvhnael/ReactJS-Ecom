@@ -9,7 +9,8 @@ const ProductCard = ({ product }) => {
             onClick={onClick}
             className="max-w-sm overflow-hidden p-1 bg-white rounded-lg shadow-lg hover:bg-gray-100"
         >
-            <img className="w-full h-auto object-cover" src={`http://localhost:1080/api/v1/${product.imagePath}`} alt={product.id} />
+            {/* <img className="w-full h-auto object-cover" src={`http://localhost:1080/api/v1/${product.imagePath}`} alt={product.id} /> */}
+            <img className=" object-cover" src={product.imagePath} alt={product.id} />
             <div className="relative h-24">
                 <div className="px-2 pt-2 absolute inset-x-0 top-0">
                     <div className="font-medium text-base mb-2 "><p className='line-clamp-2'>{product.productName}</p></div>

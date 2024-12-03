@@ -256,7 +256,7 @@ const OrderScreen = () => {
                             <tr className="bg-white rounded-xl shadow-lg">
                                 <td className="px-4 py-2 border-b border-gray-200 flex flex-row items-center space-x-4">
                                     <img
-                                        src={`${process.env.REACT_APP_JAVA_API}/${item.product.galleries[0]}`}
+                                        src={`${item.product.galleries[0]}`}
                                         alt={item.product.id}
                                         className="w-24 h-24 object-cover"
                                     />
